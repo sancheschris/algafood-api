@@ -4,12 +4,8 @@ import com.algaworks.algafood.domain.model.Cozinha;
 import com.algaworks.algafood.domain.model.Restaurante;
 import com.algaworks.algafood.domain.repository.CozinhaRepository;
 import com.algaworks.algafood.domain.repository.RestauranteRepository;
-import com.algaworks.algafood.infrastructure.repository.spec.RestauranteComFreteGratisSpec;
-import com.algaworks.algafood.infrastructure.repository.spec.RestauranteComNomeSemelhanteSpec;
-import com.algaworks.algafood.infrastructure.repository.spec.RestauranteSpecs;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -36,6 +32,11 @@ public class TesteController {
     @GetMapping("/cozinhas/exists")
     public boolean cozinhaExists(String nome) {
         return cozinhaRepository.existsByNome(nome);
+    }
+
+    @GetMapping("/cozinhas/primeira")
+    public Optional<Cozinha> cozinhaPrimeiro() {
+        return cozinhaRepository.buscarPrimeiro();
     }
 
     @GetMapping("/restaurantes/por-taxa-frete")
@@ -65,14 +66,18 @@ public class TesteController {
 
     @GetMapping("/restaurantes/com-frete-gratis")
     public List<Restaurante> restaurantesComFreteGratis(String nome) {
-        return restauranteRepository.findAll(RestauranteSpecs.comFreteGratis()
-                .and(RestauranteSpecs.comNomeSemelhante(nome)));
+        return restauranteRepository.findComFreteGratis(nome);
     }
 
 
     @GetMapping("/restaurantes/count-por-cozinha")
     public int restaurantesCount(Long cozinhaId) {
         return restauranteRepository.countByCozinhaId(cozinhaId);
+    }
+
+    @GetMapping("/restaurantes/primeiro")
+    public Optional<Restaurante> restaurantePrimeiro() {
+        return restauranteRepository.buscarPrimeiro();
     }
 
 }
