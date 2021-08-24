@@ -1,7 +1,10 @@
 package com.algaworks.algafood.api.controller;
 
-import com.algaworks.algafood.domain.exception.EntidadeEmUsoException;
+import com.algaworks.algafood.api.excpetionhandler.Problema;
+import com.algaworks.algafood.domain.exception.CidadeNaoEncontradaException;
 import com.algaworks.algafood.domain.exception.EntidadeNaoEncontradaException;
+import com.algaworks.algafood.domain.exception.EstadoNaoEncontradoException;
+import com.algaworks.algafood.domain.exception.NegocioException;
 import com.algaworks.algafood.domain.model.Cidade;
 import com.algaworks.algafood.domain.repository.CidadeRepository;
 import com.algaworks.algafood.domain.service.CadastroCidadeService;
@@ -11,8 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/cidades")
@@ -22,7 +25,7 @@ public class CidadeController {
     private CidadeRepository cidadeRepository;
 
     @Autowired
-    private CadastroCidadeService cadastroCidadeServiceService;
+    private CadastroCidadeService cadastroCidadeService;
 
     @GetMapping
     public List<Cidade> listar() {
@@ -30,49 +33,39 @@ public class CidadeController {
     }
 
     @GetMapping("/{cidadeId}")
-    public ResponseEntity<Cidade> buscar(@PathVariable Long cidadeId) {
-        Optional<Cidade> cidade = cidadeRepository.findById(cidadeId);
-
-        if (cidade.isPresent()) {
-            return ResponseEntity.ok(cidade.get());
-        }
-        return ResponseEntity.notFound().build();
+    public Cidade buscar(@PathVariable Long cidadeId) {
+        return cadastroCidadeService.buscaOuFalha(cidadeId);
     }
 
     @PostMapping
-    public ResponseEntity<Cidade> adicionar(@RequestBody Cidade cidade) {
-        cadastroCidadeServiceService.salvar(cidade);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+    @ResponseStatus(value = HttpStatus.CREATED)
+    public Cidade adicionar(@RequestBody Cidade cidade) {
+        try {
+            return cadastroCidadeService.salvar(cidade);
+        } catch (EstadoNaoEncontradoException e) {
+            throw new NegocioException(e.getMessage(), e);
+        }
     }
 
     @PutMapping("/{cidadeId}")
-    public ResponseEntity<?> atualizar(@RequestBody Cidade cidade, @PathVariable Long cidadeId) {
+    public Cidade atualizar(@RequestBody Cidade cidade, @PathVariable Long cidadeId) {
 
-        Optional<Cidade> cidadeAtual = cidadeRepository.findById(cidadeId);
 
         try {
-            if (cidadeAtual.isPresent()) {
-                BeanUtils.copyProperties(cidade, cidadeAtual.get(), "id");
+            Cidade cidadeAtual = cadastroCidadeService.buscaOuFalha(cidadeId);
 
-                Cidade cidadeSalva = cadastroCidadeServiceService.salvar(cidadeAtual.get());
-                return ResponseEntity.ok(cidadeSalva);
-            }
-        } catch (EntidadeNaoEncontradaException e) {
-            return ResponseEntity.badRequest()
-                    .body(e.getMessage());
+            BeanUtils.copyProperties(cidade, cidadeAtual, "id");
+
+            return cadastroCidadeService.salvar(cidadeAtual);
+        } catch (EstadoNaoEncontradoException e) {
+            throw new NegocioException(e.getMessage(), e);
         }
-        return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{cidadeId}")
-    public ResponseEntity<?> remover(@PathVariable Long cidadeId) {
-        try {
-            cidadeRepository.deleteById(cidadeId);
-            return ResponseEntity.noContent().build();
-        } catch (EntidadeNaoEncontradaException e) {
-            return ResponseEntity.notFound().build();
-        } catch (EntidadeEmUsoException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
+    @ResponseStatus(value = HttpStatus.NO_CONTENT)
+    public void remover(@PathVariable Long cidadeId) {
+        cidadeRepository.deleteById(cidadeId);
     }
+
 }
